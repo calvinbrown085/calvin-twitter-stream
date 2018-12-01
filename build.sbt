@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
   .settings(
     organization := "com.calvin.twitter.streamer",
     name := "twitter-streaming-project",
-    version := "0.0.1-SNAPSHOT",
+    version := "1.0.0",
     scalaVersion := "2.12.7",
     libraryDependencies ++= Seq(
       "com.github.pureconfig" %% "pureconfig" % "0.10.1",

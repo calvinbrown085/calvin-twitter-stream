@@ -33,7 +33,7 @@ object ServerStream {
       config <- Stream.eval(Config.loadConfig[F])
       scheduler <- Scheduler[F](5)
       server <- BlazeBuilder[F]
-          .bindHttp(8080, "0.0.0.0")
+          .bindHttp(config.port, "0.0.0.0")
           .mountService(helloWorldService, "/")
           .serve mergeHaltBoth TWStream.stream[F](config).drain merge calcAveragePerMinute[F](scheduler).drain
     } yield server
