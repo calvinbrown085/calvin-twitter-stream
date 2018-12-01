@@ -10,7 +10,7 @@ import org.http4s.dsl.Http4sDsl
 
 class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
 
-  final case class Response(totalTweets: Int, perMinuteAvg: Int)
+  final case class Response(totalTweets: Int, perMinuteAvg: Int, totalRunningMinutes: Int)
   object Response{
     import io.circe.generic.semiauto._
     implicit final val encoder: Encoder[Response] = deriveEncoder
@@ -22,7 +22,8 @@ class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
       case GET -> Root => {
         Ok(Response(
           totalTweets = TWStream.tweetCount,
-          perMinuteAvg = ServerStream.perMinuteAvg).asJson)
+          perMinuteAvg = ServerStream.perMinuteAvg,
+          totalRunningMinutes = ServerStream.totalRunningMinutes).asJson)
       }
       case GET -> Root / "hello" / name =>
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))
