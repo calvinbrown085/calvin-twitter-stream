@@ -18,12 +18,12 @@ object ServerStream {
   def helloWorldService[F[_]: Effect] = new HelloWorldService[F].service
 
   var perMinuteAvg = 0
-  var totalRunningMinutes = 1
+  var totalRunningMinutes = 0
 
   def calcAveragePerMinute[F[_]](scheduler: Scheduler)(implicit F: Effect[F], ec: ExecutionContext) = {
     scheduler.awakeEvery(60.seconds).evalMap(_ => F.delay{
-      perMinuteAvg = TWStream.tweetCount / ServerStream.totalRunningMinutes
       totalRunningMinutes += 1
+      perMinuteAvg = TWStream.tweetCount / ServerStream.totalRunningMinutes
     })
   }
 
