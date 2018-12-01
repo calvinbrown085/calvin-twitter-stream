@@ -1,7 +1,7 @@
 package com.calvin.twitter.streamer
 
 import cats.effect.{Effect, IO}
-import fs2.{Scheduler, StreamApp}
+import fs2.{Stream, Scheduler, StreamApp}
 import org.http4s.server.blaze.BlazeBuilder
 
 import scala.concurrent.duration._
@@ -30,10 +30,11 @@ object ServerStream {
 
   def stream[F[_]: Effect](implicit ec: ExecutionContext) =
     for {
+      config <- Stream.eval(Config.loadConfig[F])
       scheduler <- Scheduler[F](5)
       server <- BlazeBuilder[F]
           .bindHttp(8080, "0.0.0.0")
           .mountService(helloWorldService, "/")
-          .serve mergeHaltBoth TWStream.stream[F].drain merge calcAveragePerMinute[F](scheduler).drain
+          .serve mergeHaltBoth TWStream.stream[F](config).drain merge calcAveragePerMinute[F](scheduler).drain
     } yield server
 }

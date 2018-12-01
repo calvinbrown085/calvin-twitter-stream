@@ -53,9 +53,9 @@ object TWStream {
    * We map over the Circe `Json` objects to pretty-print them with `spaces2`.
    * Then we `to` them to fs2's `lines` and then to `stdout` `Sink` to print them.
    */
-  def stream[F[_]: Effect]: Stream[F, Unit] = {
+  def stream[F[_]: Effect](authConfig: Config.Auth): Stream[F, Unit] = {
     val req = Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))
-    val s   = jsonStream("", "", "", "")(req)
+    val s   = jsonStream(consumerKey = authConfig.consumerKey, consumerSecret = authConfig.consumerSecret, accessToken = authConfig.accessToken, accessSecret = authConfig.accessSecret)(req)
     s.map(_.toString).through(lines).through(utf8Encode).to(stdout)
   }
 }
