@@ -11,6 +11,7 @@ import fs2.io.stdout
 import fs2.text.{lines, utf8Encode}
 import jawnfs2._
 import io.circe.Json
+import io.prometheus.client.Counter
 
 object TWStream {
 
@@ -34,17 +35,17 @@ object TWStream {
    * `parseJsonStream` the `Response[F]`.
    * `sign` returns a `F`, so we need to `Stream.eval` it to use a for-comprehension.
    */
-  def jsonStream[F[_]: Effect](consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String)
+  def jsonStream[F[_]: Effect](counter: Counter, consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String)
       (req: Request[F]): Stream[F, BasicTweet] =
     for {
       client <- Http1Client.stream[F]()
       sr  <- Stream.eval(sign(consumerKey, consumerSecret, accessToken, accessSecret)(req))
-      res <- client.streaming(sr)(resp => basicTweetStream(resp.body.chunks.parseJsonStream))
+      res <- client.streaming(sr)(resp => basicTweetStream(resp.body.chunks.parseJsonStream, counter))
     } yield res
 
-  def basicTweetStream[F[_]: Effect](s: Stream[F, Json]): Stream[F, BasicTweet] = {
+  def basicTweetStream[F[_]: Effect](s: Stream[F, Json], counter: Counter): Stream[F, BasicTweet] = {
     s.flatMap(j =>
-      Stream.eval[F, Unit](Effect[F].delay(tweetCount += 1)) >>
+      Stream.eval[F, Unit](Effect[F].delay{counter.labels("tweet_count").inc();tweetCount += 1}) >>
           j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(tweet)))
   }
 
@@ -53,9 +54,9 @@ object TWStream {
    * We map over the Circe `Json` objects to pretty-print them with `spaces2`.
    * Then we `to` them to fs2's `lines` and then to `stdout` `Sink` to print them.
    */
-  def stream[F[_]: Effect](authConfig: Config.Auth): Stream[F, Unit] = {
+  def stream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, Unit] = {
     val req = Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))
-    val s   = jsonStream(consumerKey = authConfig.consumerKey, consumerSecret = authConfig.consumerSecret, accessToken = authConfig.accessToken, accessSecret = authConfig.accessSecret)(req)
+    val s   = jsonStream(counter, "", "", "", "")(req)
     s.map(_.toString).through(lines).through(utf8Encode).to(stdout)
   }
 }
