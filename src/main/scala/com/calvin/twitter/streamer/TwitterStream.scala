@@ -24,8 +24,8 @@ object TWStream {
   /* These values are created by a Twitter developer web app.
    * OAuth signing is an effect due to generating a nonce for each `Request`.
    */
-  def sign[F[_]: Effect](consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String)
-      (req: Request[F]): F[Request[F]] = {
+  def sign[F[_]: Effect](consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String)(
+      req: Request[F]): F[Request[F]] = {
     val consumer = oauth1.Consumer(consumerKey, consumerSecret)
     val token    = oauth1.Token(accessToken, accessSecret)
     oauth1.signRequest(req, consumer, callback = None, verifier = None, token = Some(token))
@@ -34,23 +34,32 @@ object TWStream {
    * `parseJsonStream` the `Response[F]`.
    * `sign` returns a `F`, so we need to `Stream.eval` it to use a for-comprehension.
    */
-  def jsonStream[F[_]: Effect](counter: Counter, consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String)
-      (req: Request[F]): Stream[F, BasicTweet] =
+  def jsonStream[F[_]: Effect](
+      counter: Counter,
+      consumerKey: String,
+      consumerSecret: String,
+      accessToken: String,
+      accessSecret: String)(req: Request[F]): Stream[F, BasicTweet] =
     for {
       client <- Http1Client.stream[F]()
-      sr  <- Stream.eval(sign(consumerKey, consumerSecret, accessToken, accessSecret)(req))
+      sr <- Stream.eval(sign(consumerKey, consumerSecret, accessToken, accessSecret)(req))
       res <- client.streaming(sr)(resp => basicTweetStream(resp.body.chunks.parseJsonStream, counter))
     } yield res
 
   def basicTweetStream[F[_]: Effect](s: Stream[F, Json], counter: Counter): Stream[F, BasicTweet] = {
-    s.flatMap(j =>
-      Stream.eval[F, Unit](Effect[F].delay{counter.labels("tweet_count").inc();tweetCount += 1}) >>
-          j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(println(tweet.user.location.value)) *> Stream.emit(tweet)))
+    s.flatMap(
+      j =>
+        Stream.eval[F, Unit](Effect[F].delay { counter.labels("tweet_count").inc(); tweetCount += 1 }) >>
+          j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(tweet)))
   }
-
 
   def stream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, BasicTweet] = {
     val req = Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))
-    jsonStream(counter, authConfig.consumerKey, authConfig.consumerSecret, authConfig.accessToken, authConfig.accessSecret)(req)
+    jsonStream(
+      counter,
+      authConfig.consumerKey,
+      authConfig.consumerSecret,
+      authConfig.accessToken,
+      authConfig.accessSecret)(req)
   }
 }
