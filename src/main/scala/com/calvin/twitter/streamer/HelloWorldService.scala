@@ -12,7 +12,7 @@ import org.http4s.server.prometheus.PrometheusExportService
 
 class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
 
-  final case class Response(totalTweets: Int, perMinuteAvg: Int, totalRunningMinutes: Int)
+  final case class Response(totalTweets: Int, perMinuteAvg: Int, perSecondAvg: Int, totalRunningMinutes: Int)
   object Response {
     import io.circe.generic.semiauto._
     implicit final val encoder: Encoder[Response] = deriveEncoder
@@ -29,7 +29,9 @@ class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
           Response(
             totalTweets         = TWStream.tweetCount,
             perMinuteAvg        = ServerStream.perMinuteAvg,
-            totalRunningMinutes = ServerStream.totalRunningMinutes).asJson)
+            perSecondAvg        = ServerStream.perSecondAvg,
+            totalRunningMinutes = ServerStream.totalRunningMinutes
+          ).asJson)
       }
       case GET -> Root / "hello" / name =>
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))

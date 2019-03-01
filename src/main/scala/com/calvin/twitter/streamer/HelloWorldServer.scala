@@ -22,6 +22,7 @@ object ServerStream {
       cr: CollectorRegistry) = new HelloWorldService[F].service(locationHandler, hashtagHandler, cr)
 
   var perMinuteAvg        = 0
+  var perSecondAvg        = 0
   var totalRunningMinutes = 0
 
   def calcAveragePerMinute[F[_]](scheduler: Scheduler)(implicit F: Effect[F], ec: ExecutionContext) = {
@@ -31,9 +32,9 @@ object ServerStream {
         F.delay {
           totalRunningMinutes += 1
           perMinuteAvg = TWStream.tweetCount / ServerStream.totalRunningMinutes
+          perSecondAvg = perMinuteAvg / 60
       })
   }
-
   def stream[F[_]: Effect](implicit ec: ExecutionContext) =
     for {
       cr <- Stream.eval(Effect[F].delay(new CollectorRegistry))
