@@ -11,6 +11,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.12.7",
     libraryDependencies ++= Seq(
       "com.github.pureconfig" %% "pureconfig" % "0.10.1",
+      "com.spinoco"     %% "fs2-kafka"           % "0.2.0",
       "org.http4s"      %% "http4s-blaze-server" % Http4sVersion,
       "org.http4s"      %% "http4s-blaze-client" % Http4sVersion,
       "org.http4s"      %% "http4s-circe"        % Http4sVersion,
