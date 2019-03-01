@@ -16,7 +16,7 @@ object HelloWorldServer extends StreamApp[IO] {
 
 object ServerStream {
 
-  def helloWorldService[F[_]: Effect](cr: CollectorRegistry) = new HelloWorldService[F].service(cr)
+  def helloWorldService[F[_]: Effect](locationHandler: LocationHandler[F], cr: CollectorRegistry) = new HelloWorldService[F].service(locationHandler, cr)
 
   var perMinuteAvg = 0
   var totalRunningMinutes = 0
@@ -34,9 +34,11 @@ object ServerStream {
       counter <- Stream.eval(Effect[F].delay(Counter.build("internal_counter", "Counter for helper").labelNames("counter_name").register(cr)))
       config <- Stream.eval(Config.loadConfig[F])
       scheduler <- Scheduler[F](5)
+      locationHandler = LocationHandler[F]
+      twitStream = TWStream.stream[F](config, counter)
       server <- BlazeBuilder[F]
           .bindHttp(config.port, "0.0.0.0")
-          .mountService(helloWorldService(cr), "/")
-          .serve mergeHaltBoth TWStream.stream[F](config, counter).drain merge calcAveragePerMinute[F](scheduler).drain
+          .mountService(helloWorldService(locationHandler, cr), "/")
+          .serve mergeHaltBoth calcAveragePerMinute[F](scheduler).drain merge DataIngest.ingest(twitStream, locationHandler).drain
     } yield server
 }

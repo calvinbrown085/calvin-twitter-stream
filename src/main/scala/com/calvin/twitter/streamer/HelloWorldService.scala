@@ -2,6 +2,7 @@ package com.calvin.twitter.streamer
 
 import cats.effect.Effect
 import com.calvin.twitter.streamer.models.Hashtags
+import cats.implicits._
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder, Json}
 import io.prometheus.client.CollectorRegistry
@@ -19,7 +20,7 @@ class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
     implicit final val decoder: Decoder[Response] = deriveDecoder
   }
 
-  def service(cr: CollectorRegistry): HttpService[F] = {
+  def service(locationHandler: LocationHandler[F], cr: CollectorRegistry): HttpService[F] = {
     HttpService[F] {
       case GET -> Root => {
         Ok(Response(
@@ -31,6 +32,8 @@ class HelloWorldService[F[_]: Effect] extends Http4sDsl[F] {
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))
       case GET -> Root / "metrics" =>
         PrometheusExportService.generateResponse(cr)
+      case GET -> Root / "map" =>
+        Ok(locationHandler.printMap.map(_.asJson))
     }
   }
 }

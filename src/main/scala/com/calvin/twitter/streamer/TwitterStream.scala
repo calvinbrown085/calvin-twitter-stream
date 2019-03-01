@@ -6,9 +6,8 @@ import org.http4s._
 import org.http4s.client.blaze._
 import org.http4s.client.oauth1
 import cats.effect._
+import cats.implicits._
 import fs2.Stream
-import fs2.io.stdout
-import fs2.text.{lines, utf8Encode}
 import jawnfs2._
 import io.circe.Json
 import io.prometheus.client.Counter
@@ -46,17 +45,12 @@ object TWStream {
   def basicTweetStream[F[_]: Effect](s: Stream[F, Json], counter: Counter): Stream[F, BasicTweet] = {
     s.flatMap(j =>
       Stream.eval[F, Unit](Effect[F].delay{counter.labels("tweet_count").inc();tweetCount += 1}) >>
-          j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(tweet)))
+          j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(println(tweet.user.location.value)) *> Stream.emit(tweet)))
   }
 
-  /* Stream the sample statuses.
-   * Plug in your four Twitter API values here.
-   * We map over the Circe `Json` objects to pretty-print them with `spaces2`.
-   * Then we `to` them to fs2's `lines` and then to `stdout` `Sink` to print them.
-   */
-  def stream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, Unit] = {
+
+  def stream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, BasicTweet] = {
     val req = Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))
-    val s   = jsonStream(counter, "", "", "", "")(req)
-    s.map(_.toString).through(lines).through(utf8Encode).to(stdout)
+    jsonStream(counter, authConfig.consumerKey, authConfig.consumerSecret, authConfig.accessToken, authConfig.accessSecret)(req)
   }
 }
