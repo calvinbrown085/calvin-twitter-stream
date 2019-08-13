@@ -1,6 +1,6 @@
 package com.calvin.twitter.streamer
 
-import cats.effect.{Effect, IO}
+import cats.effect.{Effect, IO, IOApp}
 import fs2.{Scheduler, Stream, StreamApp}
 import io.prometheus.client.{CollectorRegistry, Counter}
 import org.http4s.server.blaze.BlazeBuilder
@@ -8,10 +8,10 @@ import org.http4s.server.blaze.BlazeBuilder
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
-object HelloWorldServer extends StreamApp[IO] {
+object HelloWorldServer extends IOApp {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def stream(args: List[String], requestShutdown: IO[Unit]) = ServerStream.stream[IO]
+  override def run(args: List[String]) = ServerStream.stream[IO]
 }
 
 object ServerStream {
