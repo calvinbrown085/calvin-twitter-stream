@@ -7,7 +7,6 @@ lazy val root = (project in file("."))
   .settings(
     organization := "com.calvin.twitter.streamer",
     name := "twitter-streaming-project",
-    version := "1.0.0",
     scalaVersion := "2.12.7",
     libraryDependencies ++= Seq(
       "com.github.pureconfig" %% "pureconfig" % "0.10.1",
@@ -26,8 +25,10 @@ lazy val root = (project in file("."))
     ),
     addCompilerPlugin("org.spire-math" %% "kind-projector"     % "0.9.6"),
     addCompilerPlugin("com.olegpy"     %% "better-monadic-for" % "0.2.4"),
-    scalafmtOnCompile := true
+    scalafmtOnCompile := true,
+    packageName in Docker := "twitter-streaming-project"
 
   )
-
+enablePlugins(GraalVMNativeImagePlugin)
+enablePlugins(DockerPlugin)
 enablePlugins(JavaAppPackaging)
