@@ -46,11 +46,14 @@ object ServerStream {
       locationHandler = LocationHandler[F]
       hashtagHandler  = HashtagHandler[F]
       twitStream      = TWStream.stream[F](config, counter)
+      jsonStream      = TWStream.basicJsonStream(config, counter)
       server <- BlazeBuilder[F]
         .bindHttp(config.port, "0.0.0.0")
         .mountService(helloWorldService(locationHandler, hashtagHandler, cr), "/")
         .serve mergeHaltBoth calcAveragePerMinute[F](scheduler).drain merge DataIngest
         .ingest(twitStream, locationHandler, hashtagHandler)
+        .drain merge jsonStream
+        .through(KinesisProducer.putRecordsIntoKinesis[F])
         .drain
     } yield server
 }

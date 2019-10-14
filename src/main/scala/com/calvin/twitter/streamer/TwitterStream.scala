@@ -39,27 +39,34 @@ object TWStream {
       consumerKey: String,
       consumerSecret: String,
       accessToken: String,
-      accessSecret: String)(req: Request[F]): Stream[F, BasicTweet] =
+      accessSecret: String): Stream[F, Json] =
     for {
       client <- Http1Client.stream[F]()
-      sr <- Stream.eval(sign(consumerKey, consumerSecret, accessToken, accessSecret)(req))
-      res <- client.streaming(sr)(resp => basicTweetStream(resp.body.chunks.parseJsonStream, counter))
+      sr <- Stream.eval(
+        sign(consumerKey, consumerSecret, accessToken, accessSecret)(
+          Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))))
+      res <- client.streaming(sr)(resp => resp.body.chunks.parseJsonStream)
     } yield res
 
-  def basicTweetStream[F[_]: Effect](s: Stream[F, Json], counter: Counter): Stream[F, BasicTweet] = {
-    s.flatMap(
-      j =>
-        Stream.eval[F, Unit](Effect[F].delay { counter.labels("tweet_count").inc(); tweetCount += 1 }) >>
-          j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(tweet)))
-  }
+  def basicTweetStream[F[_]: Effect](j: Json, counter: Counter): Stream[F, BasicTweet] =
+    Stream.eval[F, Unit](Effect[F].delay { counter.labels("tweet_count").inc(); tweetCount += 1 }) >>
+      j.as[BasicTweet].fold(_ => Stream.empty, tweet => Stream.emit(tweet))
 
   def stream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, BasicTweet] = {
-    val req = Request[F](Method.GET, Uri.uri("https://stream.twitter.com/1.1/statuses/sample.json"))
     jsonStream(
       counter,
       authConfig.consumerKey,
       authConfig.consumerSecret,
       authConfig.accessToken,
-      authConfig.accessSecret)(req)
+      authConfig.accessSecret).flatMap(j => basicTweetStream(j, counter))
+  }
+
+  def basicJsonStream[F[_]: Effect](authConfig: Config.Auth, counter: Counter): Stream[F, Json] = {
+    jsonStream(
+      counter,
+      authConfig.consumerKey,
+      authConfig.consumerSecret,
+      authConfig.accessToken,
+      authConfig.accessSecret)
   }
 }

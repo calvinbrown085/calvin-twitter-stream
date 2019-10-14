@@ -2,6 +2,7 @@ package com.calvin.twitter.streamer
 
 import cats.effect.Sync
 import cats.implicits._
+import com.amazonaws.regions.Regions
 import com.calvin.twitter.streamer.models.{BasicTweet, Location}
 import fs2.{Pipe, Stream}
 
